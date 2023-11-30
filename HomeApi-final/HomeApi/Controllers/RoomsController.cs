@@ -1,7 +1,10 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using AutoMapper;
+using HomeApi.Contracts.Models.Devices;
 using HomeApi.Contracts.Models.Rooms;
 using HomeApi.Data.Models;
+using HomeApi.Data.Queries;
 using HomeApi.Data.Repos;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,11 +18,13 @@ namespace HomeApi.Controllers
     public class RoomsController : ControllerBase
     {
         private IRoomRepository _repository;
+        private IRoomRepository _rooms;
         private IMapper _mapper;
         
-        public RoomsController(IRoomRepository repository, IMapper mapper)
+        public RoomsController(IRoomRepository repository, IRoomRepository rooms, IMapper mapper)
         {
             _repository = repository;
+            _rooms = rooms;
             _mapper = mapper;
         }
         
@@ -42,5 +47,30 @@ namespace HomeApi.Controllers
             
             return StatusCode(409, $"Ошибка: Комната {request.Name} уже существует.");
         }
+
+
+        /// <summary>
+        /// Обновление существующего устройства
+        /// </summary>
+        [HttpPatch]
+        [Route("{id}")]
+        public async Task<IActionResult> Edit(
+            [FromRoute] Guid id,
+            [FromBody] EditRoomsRequest request)
+        {
+            var room = await _rooms.GetRoomByName(request.NewName);
+            if (room == null)
+                return StatusCode(400, $"Ошибка: Комната {request.NewName} не существует!");
+
+            room.Area = request.NewArea;
+            room.GasConnected = request.NewGasConnected;
+            room.Voltage = request.NewVoltage;
+
+            await _rooms.UpdateRoom(room);
+
+            return StatusCode(200, $"Комната обновлена! Имя - {room.Name}");
+        }
+
+
     }
 }
